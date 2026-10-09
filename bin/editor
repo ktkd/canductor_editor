@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# canductor-editor — web editor for canductor scenarios.
+# Serves the single-page UI + scenario API over a scenarios directory.
+# Usage:  ./editor [--scenarios /path/to/scenarios] [--port 8120]
+#          SCENARIOS_DIR=/path/to/scenarios ./editor
+set -euo pipefail
+exec python3 -m canductor_editor "$@"

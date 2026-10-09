@@ -1,0 +1,68 @@
+{
+ "name": "bench_quick",
+ "title": "Bench quick (dummy scenario for the UI e2e checks)",
+ "version": "1.0",
+ "cars": {
+  "dummy": {
+   "label": "Dummy adapter pair (no car) - echo bench"
+  }
+ },
+ "buses": {
+  "hs": {
+   "label": "HS-CAN 500 kbit/s",
+   "can_baud": 500000,
+   "point": "bench echo",
+   "std_only": true
+  },
+  "ms": {
+   "label": "MS-CAN 125 kbit/s",
+   "can_baud": 125000,
+   "point": "bench echo",
+   "std_only": true
+  }
+ },
+ "rules": {
+  "quiet_s": 2,
+  "after_s": 2,
+  "repeats": 3,
+  "pause_s": 3,
+  "action_min_s": 5,
+  "action_max_s": 15,
+  "state_max_s": 120
+ },
+ "known_ids": {},
+ "warnings": [],
+ "stages": [
+  {
+   "id": "1",
+   "title": "Bench echo",
+   "warn": "",
+   "checklist": [
+    "frames sent by one adapter are visible on the second (hs.log / ms.log)"
+   ],
+   "tests": [
+    {
+     "id": "1.1",
+     "kind": "state",
+     "title": "Background traffic",
+     "do": "the worker injects background frames 0x201/0x420; adapters reflect them to each other",
+     "car": [
+      "dummy"
+     ],
+     "bus": [
+      "hs",
+      "ms"
+     ],
+     "duration": "open-ended",
+     "file": "bench_echo",
+     "note": "",
+     "checks": [
+      "0x201",
+      "0x420"
+     ],
+     "tx": []
+    }
+   ]
+  }
+ ]
+}

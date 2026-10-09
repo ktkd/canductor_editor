@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "canductor-editor"
+version = "0.1.0"
+description = "CANDuctor scenario editor — web UI for building canductor test scenarios (stdlib-only)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "ktkd", email = "ktk@ktkd.ru" }]
+keywords = ["can", "waveshare", "usb-can", "scenario", "editor"]
+dependencies = []
+classifiers = [
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Hardware",
+]
+
+[project.urls]
+Homepage = "https://ktkd.ru"
+Source = "https://github.com/ktkd/canductor_editor"
+
+[project.scripts]
+canductor-editor = "canductor_editor.server:main"
+
+[tool.setuptools]
+packages = ["canductor_editor"]
+
+[tool.setuptools.package-data]
+"canductor_editor" = ["web/index.html"]

@@ -1,0 +1,8 @@
+# conda env for the PyPI publish step (twine is pip-installed in the workflow)
+name: ci-publish
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pip

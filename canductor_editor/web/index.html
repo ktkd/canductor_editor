@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CANDuctor — scenario editor</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --primary: #0d47a1;
+  --border: #ddd;
+  --zebra: #f5f7fa;
+  --hover: #e3f2fd;
+  --highlight: #fff3e0;
+  --good: #2e7d32;   --good-bg: #c8e6c9;
+  --warn: #ef6c00;   --warn-bg: #ffe0b2;
+  --bad:  #c62828;   --bad-bg:  #ffcdd2;
+  --yellow: #f57f17; --yellow-bg: #fff9c4;
+  --muted: #666;
+  --code-bg: #f5f7fa;
+  --mono: Consolas, 'DejaVu Sans Mono', monospace;
+}
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-size: 11px; color: var(--fg); background: var(--bg);
+  margin: 0; padding: 12px 16px; line-height: 1.4; min-height: 100%;
+}
+* { scrollbar-width: thin; scrollbar-color: #cfd8dc transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: #cfd8dc; border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: #90a4ae; }
+h1 { font-size: 20px; margin: 0; color: var(--primary); font-weight: 600; }
+h2 { font-size: 15px; margin: 0 0 8px; color: var(--primary); font-weight: 600;
+     border-bottom: 2px solid var(--primary); padding-bottom: 4px; }
+h3 { font-size: 13px; margin: 16px 0 6px; color: #333; }
+a { color: var(--primary); }
+table {
+  width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0;
+  background: #fff; font-size: 10.5px;
+}
+table input, table select, table textarea { width: 100%; min-width: 0; }
+th {
+  background: var(--primary); color: #fff; padding: 5px 8px; text-align: left;
+  font-weight: 600; border: 1px solid var(--primary); font-size: 10px;
+}
+td { padding: 4px 8px; border: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+tr:nth-child(even) td { background: var(--zebra); }
+tbody tr:hover td { background: var(--hover); }
+code {
+  background: var(--code-bg); padding: 1px 5px; border-radius: 3px;
+  font-family: var(--mono); color: var(--primary); font-size: 9.5px;
+}
+pre {
+  background: var(--code-bg); padding: 12px; border-radius: 4px; overflow: auto;
+  border-left: 4px solid var(--primary); margin: 0;
+  font-family: var(--mono); font-size: 10px; white-space: pre-wrap; word-break: break-all; color: var(--fg);
+}
+.mono { font-family: var(--mono); }
+.small { font-size: 10px; }
+.muted { color: var(--muted); }
+.bad { color: var(--bad); font-weight: 600; }
+.good { color: var(--good); font-weight: 600; }
+.warning { background: var(--warn-bg); border-left: 4px solid var(--warn); padding: 9px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
+.critical { background: var(--bad-bg); border-left: 4px solid var(--bad); padding: 9px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
+.success { background: var(--good-bg); border-left: 4px solid var(--good); padding: 9px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
+.info { background: var(--hover); border-left: 4px solid var(--primary); padding: 9px 12px; margin: 8px 0; border-radius: 0 4px 4px 0; }
+.badge {
+  display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 9.5px;
+  font-weight: 600; margin-right: 4px; background: var(--zebra); color: #333; border: 1px solid var(--border);
+}
+.badge-hs { background: var(--primary); color: #fff; border-color: var(--primary); }
+.badge-ms { background: var(--yellow-bg); color: var(--yellow); border-color: var(--yellow); }
+.badge-action { background: var(--bad-bg); color: var(--bad); border-color: var(--bad); }
+.badge-verify { background: var(--good-bg); color: var(--good); border-color: var(--good); }
+
+#topbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+#topline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; background: #fff;
+  border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px; font-size: 9.5px;
+}
+.chip .k { color: var(--muted); }
+#main {
+  display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 12px; align-items: start;
+}
+.panel { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin: 0; }
+#column { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.row2 { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0; }
+.row2 > div { min-width: 0; }
+/* tabs */
+#tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.tab {
+  display: inline-block; padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px;
+  font-size: 10.5px; cursor: pointer; background: #fff; color: var(--fg); font-weight: 600;
+}
+.tab:hover { border-color: var(--primary); color: var(--primary); }
+.tab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.tab .n { opacity: 0.65; font-weight: 400; }
+/* forms */
+.field { display: flex; flex-direction: column; gap: 3px; margin: 6px 0; min-width: 110px; font-size: 10.5px; }
+.field label { font-size: 9.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+input, select, textarea {
+  background: #fff; color: var(--fg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 4px 8px; font-family: inherit; font-size: 10.5px;
+}
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); background: var(--hover); }
+input[type=checkbox] { accent-color: var(--primary); }
+textarea { resize: vertical; min-height: 44px; }
+textarea.src { min-height: 420px; font-family: var(--mono); font-size: 10px; line-height: 1.35; white-space: pre; overflow: auto; }
+.form-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.btn {
+  display: inline-block; background: #fff; color: var(--fg); border: 1px solid var(--border);
+  border-radius: 4px; padding: 5px 12px; font-size: 10.5px; cursor: pointer; font-family: inherit; font-weight: 600;
+}
+.btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--hover); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn-go { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-go:hover:not(:disabled) { background: #1565c0; color: #fff; }
+.btn-bad { border-color: var(--bad); color: var(--bad); }
+.btn-bad:hover:not(:disabled) { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+.btn-sm { padding: 3px 9px; font-size: 9.5px; }
+.btn-xs { padding: 1px 6px; font-size: 9px; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* scenario list */
+.scen-row {
+  display: flex; align-items: center; gap: 7px; padding: 5px 7px; margin: 2px 0;
+  border: 1px solid transparent; border-left: 3px solid var(--border); border-radius: 3px;
+  cursor: pointer; font-size: 10.5px;
+}
+.scen-row:hover { background: var(--hover); }
+.scen-row.on { border-left-color: var(--primary); background: var(--highlight); }
+.scen-row .meta { color: var(--muted); font-size: 9.5px; margin-left: auto; white-space: nowrap; }
+/* stage cards */
+.stage-card { border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: 4px; margin: 10px 0; background: #fff; }
+.stage-head { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 7px 10px; }
+.stage-head input.t-in { font-weight: 700; }
+.stage-body { padding: 8px 10px; border-top: 1px solid var(--border); }
+/* checklist / list lines */
+.llist { margin: 6px 0; }
+.lline { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.lline input[type=text] { flex: 1; }
+/* test table rows */
+.test-row td { cursor: pointer; }
+.test-row.cur td { background: var(--highlight); }
+/* misc */
+.kv { margin: 5px 0; font-size: 10.5px; }
+.kv b { color: var(--primary); font-weight: 600; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0 16px; }
+.idchip { font-family: var(--mono); font-size: 9.5px; margin: 1px 3px 0 0; }
+.errbox { margin-top: 8px; }
+#sourcediv { display: flex; flex-direction: column; gap: 8px; }
+.hint { color: var(--muted); font-size: 9.5px; margin-top: 3px; }
+/* known-IDs action column: buttons wrap inside the narrow cell */
+.t-known td:last-child { display: flex; flex-wrap: wrap; gap: 2px; }
+
+@media (max-width: 900px) {
+  #main { grid-template-columns: 1fr; }
+  .grid2, .grid3 { grid-template-columns: 1fr; }
+  /* tables must follow the viewport: the author px hints become %/
+     small widths (table-layout: fixed reads them from the <th> row) */
+  .t-cars th:nth-child(1) { width: 30% !important; }
+  .t-cars th:nth-child(3) { width: 34px !important; }
+  .t-buses th:nth-child(1) { width: 14% !important; }
+  .t-buses th:nth-child(2) { width: 21% !important; }
+  .t-buses th:nth-child(3) { width: 15% !important; }
+  .t-buses th:nth-child(4) { width: 12% !important; }
+  .t-buses th:nth-child(5) { width: 26% !important; }
+  .t-buses th:nth-child(6) { width: 12% !important; }
+  .t-known th:nth-child(1) { width: 15% !important; }
+  .t-known th:nth-child(2) { width: 25% !important; }
+  .t-known th:nth-child(3) { width: 20% !important; }
+  .t-known th:nth-child(4) { width: 26% !important; }
+  .t-known th:nth-child(5) { width: 14% !important; }
+  .t-tests th:nth-child(1) { width: 11% !important; }
+  .t-tests th:nth-child(3) { width: 10% !important; }
+  .t-tests th:nth-child(4) { width: 15% !important; }
+  .t-tests th:nth-child(5) { width: 11% !important; }
+  .t-tests th:nth-child(6) { width: 9% !important; }
+  .t-tests th:nth-child(7) { width: 11% !important; }
+  .t-tests th:nth-child(8) { width: 7% !important; }
+}
+</style>
+</head>
+<body>
+<header id="topbar">
+  <h1>CANDuctor — scenario editor</h1>
+  <div id="topline">
+    <span id="scenchip" class="chip"><span class="k">scenario</span> <b class="mono" id="scenname">—</b>
+      <span class="muted small" id="scendirty"></span></span>
+    <span id="dirchip" class="chip"><span class="k">dir</span> <span class="mono small" id="dirpath">—</span></span>
+    <span id="fschip" class="chip"><span class="k">local file</span> <span class="mono small" id="fsname">—</span></span>
+    <button id="b-save" class="btn btn-go btn-sm">save</button>
+    <button id="b-dup" class="btn btn-sm">duplicate</button>
+    <button id="b-del" class="btn btn-sm btn-bad">delete</button>
+    <span id="toastdiv" class="small"></span>
+  </div>
+</header>
+<div id="main">
+  <aside class="panel" id="scenpanel">
+    <h2>Scenarios</h2>
+    <div id="scenlist" class="llist"><div class="muted small">loading…</div></div>
+    <div class="form-row" style="margin-top:8px">
+      <div class="field" style="flex:1;min-width:120px">
+        <label>New scenario name</label>
+        <input id="newscen" type="text" placeholder="my_scenario">
+      </div>
+      <button id="b-new" class="btn btn-go">Create</button>
+    </div>
+    <div class="hint">names: first char — a letter or a digit; allowed too <span class="mono">. _ -</span>; up to 64 chars; one file per scenario</div>
+    <h3 style="margin-top:12px">Local file</h3>
+    <div class="btn-row" style="margin-top:0">
+      <button id="b-fs-open" class="btn btn-sm" style="flex:1">Open file…</button>
+      <button id="b-fs-save" class="btn btn-sm" style="flex:1">Save file…</button>
+    </div>
+    <div class="btn-row">
+      <button id="b-fs-saveas" class="btn btn-sm" style="flex:1">Save as…</button>
+      <button id="b-fs-detach" class="btn btn-xs btn-bad" style="flex:1" disabled>detach</button>
+    </div>
+    <div class="hint">reads/writes the browser's own file system (File System Access API; download/picker fallback elsewhere)</div>
+  </aside>
+  <div id="column">
+    <section id="scenpanel2" class="panel">
+      <h2>Scenario</h2>
+      <div id="scenmeta"><div class="muted small">no scenario loaded</div></div>
+    </section>
+    <section class="panel">
+      <div id="tabs">
+        <span class="tab on" data-tab="stages">Stages &amp; tests</span>
+        <span class="tab" data-tab="cars">Cars <span class="n" id="ncars"></span></span>
+        <span class="tab" data-tab="buses">Buses <span class="n" id="nbuses"></span></span>
+        <span class="tab" data-tab="known">Known IDs <span class="n" id="nknown"></span></span>
+        <span class="tab" data-tab="rules">Session rules</span>
+        <span class="tab" data-tab="source">Source</span>
+      </div>
+      <div id="tab-stages" class="tabpane"></div>
+      <div id="tab-cars" class="tabpane" style="display:none"></div>
+      <div id="tab-buses" class="tabpane" style="display:none"></div>
+      <div id="tab-known" class="tabpane" style="display:none"></div>
+      <div id="tab-rules" class="tabpane" style="display:none"></div>
+      <div id="tab-source" class="tabpane" style="display:none"><div id="sourcediv">
+        <textarea id="srctext" class="src mono" spellcheck="false"></textarea>
+        <div class="btn-row">
+          <button id="b-src-format" class="btn btn-sm">Format JSON</button>
+          <button id="b-src-apply" class="btn btn-go btn-sm">Apply to editor</button>
+          <button id="b-src-reload" class="btn btn-sm">Reload from file</button>
+          <span id="srcstat" class="muted small"></span>
+        </div>
+      </div></div>
+    </section>
+  </div>
+</div>
+
+<script>
+'use strict';
+const API = '';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const state = {
+  names: [],          // scenario files in the dir
+  name: '',           // loaded scenario name
+  doc: null,          // the edited document (plain object)
+  dirty: false,
+  srcDirty: false,    // source textarea edited (not yet applied/reloaded)
+  srcBase: '',        // the doc serialization the textarea is in sync with
+  saving: false,
+  fs: null,           // local file link {name, handle|file}
+  tab: 'stages',
+  selTest: null,      // test id currently open in the editor
+};
+function srcBaseNow() {
+  state.srcBase = state.doc ? JSON.stringify(state.doc, null, 1) : '';
+}
+
+// --- api ---------------------------------------------------------------
+async function jreq(u, o = {}) {
+  const r = await fetch(API + u, o);
+  let j = null;
+  try { j = await r.json(); } catch (e) { throw new Error('HTTP ' + r.status + ' (not JSON)'); }
+  if (!r.ok) throw new Error((j && j.error) || ('HTTP ' + r.status));
+  return j;
+}
+const post = (u, b) => jreq(u, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(b || {}) });
+
+function markDirty() {
+  state.dirty = true;
+  const el = $('scendirty');
+  if (el) { el.textContent = '· unsaved'; el.className = 'bad small'; }
+}
+function markClean() {
+  state.dirty = false;
+  const el = $('scendirty');
+  if (el) { el.textContent = ''; el.className = 'muted small'; }
+}
+
+// --- doc helpers (get/set arrays of cars/buses/stages/tests) ------------
+function carsArr() { return Object.entries(state.doc.cars || {}).map(([alias, c]) => ({ alias, ...c })); }
+function busesArr() { return Object.entries(state.doc.buses || {}).map(([alias, b]) => ({ alias, ...b })); }
+function ruleVal(key, def) {
+  const v = (state.doc.rules || {})[key];
+  return (v === undefined || v === null) ? def : v;
+}
+function setRule(key, v) { state.doc.rules = state.doc.rules || {}; state.doc.rules[key] = v; }
+function stages() { state.doc.stages = state.doc.stages || []; return state.doc.stages; }
+function testById(id) {
+  for (const st of stages()) for (const t of (st.tests || [])) if (t.id === id) return { st, t };
+  return null;
+}
+function nextTestId(stage) {
+  const seq = (stage.tests || []).map((t) => String(t.id));
+  let max = 0;
+  for (const s of seq) {
+    const m = s.match(/(?:^|\.)(\d+)$/);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+  const base = stage.id + '.';
+  let n = max + 1, id;
+  do { id = base + n; n += 1; } while (testById(id));
+  return id;
+}
+
+// --- scenario list ------------------------------------------------------
+async function refreshList() {
+  try {
+    const j = await jreq('/api/scenarios');
+    state.names = j.names || [];
+    $('dirpath').textContent = j.dir;
+    renderScenList();
+  } catch (e) { $('scenlist').innerHTML = '<div class="critical">list: ' + esc(e.message) + '</div>'; }
+}
+function renderScenList() {
+  const el = $('scenlist'); if (!el) return;
+  if (!state.names.length) { el.innerHTML = '<div class="muted small">no scenario files</div>'; return; }
+  el.innerHTML = state.names.map((n) =>
+    '<div class="scen-row' + (n === state.name ? ' on' : '') + '" data-scen="' + esc(n) + '">'
+    + '<b>' + esc(n) + '</b><span class="meta"></span></div>'
+  ).join('');
+  el.querySelectorAll('.scen-row').forEach((row) => row.addEventListener('click', () => openScenario(row.dataset.scen)));
+}
+async function openScenario(name) {
+  if (state.dirty && !confirm('The current scenario has unsaved changes. Open ' + name + ' anyway?')) return;
+  try {
+    const j = await jreq('/api/scenario?name=' + encodeURIComponent(name));
+    state.name = name; state.doc = j.doc; markClean();
+    srcBaseNow();
+    $('scenname').textContent = name;
+    state.selTest = null;
+    renderAll();
+  } catch (e) { alert('open: ' + e.message); }
+}
+async function createScenario() {
+  const name = $('newscen').value.trim();
+  if (!name) { $('newscen').focus(); return; }
+  try {
+    await post('/api/scenario/new', { name });
+    $('newscen').value = '';
+    await refreshList();
+    await openScenario(name);
+  } catch (e) { alert('create: ' + e.message); }
+}
+async function dupScenario() {
+  if (!state.name) return;
+  const base = prompt('Copy the current scenario to:', (state.name + '_copy').slice(0, 64));
+  if (!base) return;
+  try {
+    await post('/api/scenario/duplicate', { name: base, from: state.name });
+    markClean();
+    await refreshList();
+    await openScenario(base);
+  } catch (e) { alert('duplicate: ' + e.message); }
+}
+async function delScenario() {
+  if (!state.name) return;
+  if (!confirm('Delete the file "' + state.name + '.json"?')) return;
+  try {
+    await post('/api/scenario/delete', { name: state.name });
+    state.doc = null; state.name = ''; state.selTest = null;
+    $('scenname').textContent = '—';
+    await refreshList();
+    renderAll();
+  } catch (e) { alert('delete: ' + e.message); }
+}
+async function saveScenario() {
+  if (!state.doc) return;
+  if (state.saving) return;
+  state.saving = true;
+  const btn = $('b-save'); if (btn) btn.disabled = true;
+  try {
+    const j = await post('/api/scenario', { name: state.name, doc: state.doc, overwrite: true });
+    markClean();
+    await refreshList();
+    toast('saved ' + state.name + ' (' + j.bytes + ' bytes)');
+  } catch (e) { toast('save: ' + e.message, true); }
+  finally { state.saving = false; if (btn) btn.disabled = false; }
+}
+let toastT = null;
+function toast(msg, bad) {
+  let el = $('toastdiv');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'small ' + (bad ? 'bad' : 'good');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { el.textContent = ''; }, 3500);
+}
+
+// --- open/save from the browser's local file system --------------------
+function fsUpdateChip() {
+  const el = $('fsname');
+  if (el) el.textContent = state.fs ? (state.fs.name || 'local file') : '—';
+  const det = $('b-fs-detach');
+  if (det) det.disabled = !state.fs;
+}
+async function fsLoadText(text, fname, fsInfo) {
+  let doc;
+  try { doc = JSON.parse(text); } catch (e) { throw new Error('not JSON: ' + e.message); }
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new Error('must be a JSON object');
+  if (!doc.cars || typeof doc.cars !== 'object' || Array.isArray(doc.cars)) throw new Error('not a scenario document (no cars section)');
+  if (!doc.name) doc.name = (String(fname).replace(/\.json$/i, '') || 'scenario');
+  state.doc = doc;
+  state.name = doc.name;
+  state.fs = fsInfo || null;
+  state.selTest = null;
+  markClean();
+  fsUpdateChip();
+  await refreshList();
+  renderAll();
+  toast('loaded ' + fname);
+}
+async function fsOpen() {
+  if (state.doc && state.dirty && !confirm('The current scenario has unsaved changes. Open a local file anyway?')) return;
+  try {
+    if (window.showOpenFilePicker) {
+      const [h] = await showOpenFilePicker({
+        multiple: false,
+        types: [{ description: 'CANDuctor scenario', accept: { 'application/json': ['.json'] } }],
+      });
+      const f = await h.getFile();
+      await fsLoadText(await f.text(), f.name, { name: f.name, handle: h });
+    } else {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.addEventListener('change', async () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        try {
+          await fsLoadText(await f.text(), f.name, { name: f.name, file: f });
+        } catch (e) { toast('open: ' + e.message, true); }
+      });
+      input.click();
+    }
+  } catch (e) {
+    if (e && e.name !== 'AbortError') toast('open: ' + e.message, true);
+  }
+}
+async function fsSave(saveAs) {
+  if (!state.doc) { toast('nothing to save: no scenario loaded', true); return; }
+  const payload = JSON.stringify(state.doc, null, 1) + '\n';
+  const sugg = (state.name || 'scenario') + '.json';
+  try {
+    const hs = (!saveAs && state.fs) ? state.fs.handle : null;
+    if (hs) {
+      let perm = 'granted';
+      if (hs.queryPermission) perm = await hs.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') perm = await hs.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') throw new Error('write permission denied');
+      const w = await hs.createWritable();
+      await w.write(payload);
+      await w.close();
+      markClean();
+      toast('saved to ' + hs.name);
+      return;
+    }
+    if (window.showSaveFilePicker) {
+      const h = await showSaveFilePicker({
+        suggestedName: sugg,
+        types: [{ description: 'CANDuctor scenario', accept: { 'application/json': ['.json'] } }],
+      });
+      const w = await h.createWritable();
+      await w.write(payload);
+      await w.close();
+      state.fs = { name: h.name, handle: h };
+      fsUpdateChip();
+      markClean();
+      toast('saved as ' + h.name);
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
+    a.download = sugg;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    markClean();
+    toast('downloaded ' + sugg);
+  } catch (e) {
+    if (e && e.name !== 'AbortError') toast('save: ' + e.message, true);
+  }
+}
+function fsDetach() {
+  state.fs = null;
+  fsUpdateChip();
+  toast('local file detached');
+}
+
+// --- tabs ----------------------------------------------------------------
+function setTab(t) {
+  state.tab = t;
+  document.querySelectorAll('.tab').forEach((el) => el.classList.toggle('on', el.dataset.tab === t));
+  ['stages','cars','buses','known','rules','source'].forEach((k) => {
+    const p = $('tab-' + k);
+    if (p) p.style.display = (k === t) ? '' : 'none';
+  });
+  renderAll();
+}
+
+// --- scenario meta --------------------------------------------------------
+function renderMeta() {
+  const p = $('scenmeta'); if (!p) return;
+  if (!state.doc) { p.innerHTML = '<div class="muted small">no scenario loaded</div>'; return; }
+  const d = state.doc;
+  let html = '<div class="grid3">'
+    + '<div class="field"><label>Name (file)</label><div class="mono"><b>' + esc(d.name) + '</b></div></div>'
+    + '<div class="field" style="flex:2"><label>Title</label><input data-m="title" type="text" value="' + esc(d.title || '') + '"></div>'
+    + '<div class="field"><label>Version</label><input data-m="version" type="text" value="' + esc(d.version || '') + '"></div>'
+    + '</div>';
+  if ((d.warnings || []).length) {
+    html += '<h3>Warnings</h3><div class="warning">' + d.warnings.map((w) => '⚠ ' + esc(w)).join('<br>') + '</div>';
+  }
+  p.innerHTML = html;
+  p.querySelectorAll('input[data-m]').forEach((el) => el.addEventListener('input', () => {
+    d[el.dataset.m] = el.value; markDirty();
+  }));
+}
+
+// --- cars ------------------------------------------------------------------
+function renderCars() {
+  const p = $('tab-cars'); if (!p) return;
+  const d = state.doc;
+  $('ncars').textContent = Object.keys(d.cars || {}).length;
+  let html = '<div class="info">Vehicle aliases referenced by tests (<code>car</code> field). The worker runs a test for each car of a stage&rsquo;s recording plan.</div>';
+  html += '<table class="t-cars"><thead><tr><th style="width:120px">alias</th><th>label</th><th style="width:60px"></th></tr></thead><tbody>';
+  for (const c of carsArr()) {
+    html += '<tr><td class="mono"><b>' + esc(c.alias) + '</b></td>'
+      + '<td><input data-car-label="' + esc(c.alias) + '" type="text" value="' + esc(c.label || '') + '"></td>'
+      + '<td><button class="btn btn-xs btn-bad" data-car-del="' + esc(c.alias) + '">×</button></td></tr>';
+  }
+  html += '</tbody></table>'
+    + '<div class="form-row" style="margin-top:8px">'
+    + '<div class="field" style="min-width:110px"><label>New alias</label><input id="ncar-alias" type="text" placeholder="e.g. fh"></div>'
+    + '<div class="field" style="flex:1;min-width:200px"><label>Label</label><input id="ncar-label" type="text" placeholder="Mazda …"></div>'
+    + '<button id="b-car-add" class="btn btn-go">Add</button></div>';
+  p.innerHTML = html;
+  p.querySelectorAll('input[data-car-label]').forEach((el) => el.addEventListener('input', () => {
+    d.cars[el.dataset.carLabel].label = el.value; markDirty();
+  }));
+  p.querySelectorAll('[data-car-del]').forEach((el) => el.addEventListener('click', () => {
+    const a = el.dataset.carDel;
+    if (confirm('Remove car ' + a + '? (tests still referencing it will fail validation)')) {
+      delete d.cars[a]; markDirty(); renderAll();
+    }
+  }));
+  $('b-car-add').addEventListener('click', () => {
+    const a = $('ncar-alias').value.trim().toLowerCase();
+    if (!a) return;
+    if (d.cars[a]) { alert('alias exists'); return; }
+    d.cars[a] = { label: $('ncar-label').value.trim() || a };
+    markDirty(); renderCars();
+  });
+}
+
+// --- buses ------------------------------------------------------------------
+function renderBuses() {
+  const p = $('tab-buses'); if (!p) return;
+  const d = state.doc;
+  $('nbuses').textContent = Object.keys(d.buses || {}).length;
+  let html = '<div class="info">Fixed pair of buses — <b>HS</b> (500 kbit/s) and <b>MS</b> (125 kbit/s), one adapter each: no other buses are supported. <code>can_baud</code> is applied at test start (reconfigure on change), <code>std_only</code>/variable come from test settings.</div>';
+  html += '<table class="t-buses"><thead><tr><th style="width:90px">alias</th><th style="width:220px">label</th><th style="width:110px">can_baud</th>'
+    + '<th style="width:90px">std_only</th><th>point (connector)</th><th style="width:60px"></th></tr></thead><tbody>';
+  for (const b of busesArr()) {
+    const cls = b.alias.toLowerCase() === 'ms' ? 'badge-ms' : 'badge-hs';
+    html += '<tr><td><span class="badge ' + cls + '">' + esc(b.alias.toUpperCase()) + '</span></td>'
+      + '<td><input data-b-label="' + esc(b.alias) + '" type="text" value="' + esc(b.label || '') + '"></td>'
+      + '<td><input data-b-baud="' + esc(b.alias) + '" type="number" step="1000" min="1" value="' + esc(b.can_baud == null ? 500000 : b.can_baud) + '"></td>'
+      + '<td style="text-align:center"><input data-b-std="' + esc(b.alias) + '" type="checkbox"' + (!(d.buses[b.alias] || {}).std_only === false ? '' : ' checked') + ' style="width:auto"></td>'
+      + '<td><input data-b-point="' + esc(b.alias) + '" type="text" value="' + esc(b.point || '') + '"></td>'
+      + '<td><button class="btn btn-xs btn-bad" data-b-del="' + esc(b.alias) + '">×</button></td></tr>';
+  }
+  html += '</tbody></table>'
+    + '<div class="hint">to remove a bus row, press × — tests still referencing it will fail validation</div>';
+  p.innerHTML = html;
+  p.querySelectorAll('input[data-b-label]').forEach((el) => el.addEventListener('input', () => { d.buses[el.dataset.bLabel].label = el.value; markDirty(); }));
+  p.querySelectorAll('input[data-b-point]').forEach((el) => el.addEventListener('input', () => { d.buses[el.dataset.bPoint].point = el.value; markDirty(); }));
+  p.querySelectorAll('input[data-b-baud]').forEach((el) => el.addEventListener('input', () => {
+    const v = Number(el.value); if (v > 0) { d.buses[el.dataset.bBaud].can_baud = Math.round(v); markDirty(); }
+  }));
+  p.querySelectorAll('input[data-b-std]').forEach((el) => el.addEventListener('change', () => {
+    d.buses[el.dataset.bStd].std_only = el.checked; markDirty();
+  }));
+  p.querySelectorAll('[data-b-del]').forEach((el) => el.addEventListener('click', () => {
+    const a = el.dataset.bDel;
+    if (confirm('Remove bus ' + a + '? (tests still referencing it will fail validation)')) {
+      delete d.buses[a]; markDirty(); renderAll();
+    }
+  }));
+}
+
+// --- known IDs ------------------------------------------------------------
+function renderKnown() {
+  const p = $('tab-known'); if (!p) return;
+  const d = state.doc;
+  const cars = Object.keys(d.cars || {});
+  $('nknown').textContent = cars.reduce((n, c) => n + ((d.known_ids || {})[c] || []).length, 0);
+  let html = '<div class="info">Signal reference per car: CAN id, byte offset and decoding formula — for analysts and report review.</div>';
+  if (!cars.length) {
+    html += '<div class="muted small">add a car in the <b>Cars</b> tab first — “known ids” are reference rows per car</div>';
+  } else {
+    html += '<h3>New</h3><div class="form-row">'
+      + '<div class="field" style="min-width:120px"><label>Car</label><select id="nki-car">' + cars.map((c) => '<option value="' + esc(c) + '">' + esc(c) + '</option>').join('') + '</select></div>'
+      + '<div class="field" style="min-width:120px"><label>CAN id</label><input id="nki-id" type="text" placeholder="0x201" class="mono"></div>'
+      + '<button id="b-ki-add" class="btn btn-go">Add id</button></div>';
+  }
+  for (const c of cars) {
+    const list = (d.known_ids || {})[c] || [];
+    if (!list.length) continue;
+    html += '<h3>Car: <b>' + esc(c) + '</b></h3><table class="t-known"><thead><tr><th style="width:90px">id</th><th style="width:170px">param</th><th style="width:140px">bytes</th><th>formula</th><th style="width:80px"></th></tr></thead><tbody>';
+    for (let i = 0; i < list.length; i++) {
+      const k = list[i] || {};
+      const pr = (k.params || []);
+      for (let j = 0; j < Math.max(1, pr.length); j++) {
+        const pp = pr[j] || {};
+        html += '<tr>'
+          + (j === 0 ? '<td class="mono">' + esc(k.id || '') + '</td>' : '<td></td>')
+          + '<td><input data-kpn="' + esc(c) + ',' + i + ',' + j + '" data-kk="name" type="text" value="' + esc(pp.name || '') + '"></td>'
+          + '<td><input data-kpn="' + esc(c) + ',' + i + ',' + j + '" data-kk="bytes" type="text" value="' + esc(pp.bytes || '') + '" class="mono"></td>'
+          + '<td><input data-kpn="' + esc(c) + ',' + i + ',' + j + '" data-kk="formula" type="text" value="' + esc(pp.formula || '') + '" class="mono"></td>'
+          + '<td class="small mono">';
+        if (j === 0) html += '<button class="btn btn-xs" data-kpp="' + esc(c) + ',' + i + '">+ param</button> ';
+        if (pr.length > 1) html += '<button class="btn btn-xs btn-bad" data-kpd="' + esc(c) + ',' + i + ',' + j + '">−</button> ';
+        if (j === 0 && pr.length === 1) html += '<button class="btn btn-xs btn-bad" data-kid="' + esc(c) + ',' + i + '">×</button>';
+        html += '</td></tr>';
+      }
+    }
+    html += '</tbody></table>';
+  }
+  p.innerHTML = html;
+  const setParam = (c, i, j, key, val) => {
+    const list = ((d.known_ids || {})[c] || []);
+    const k = list[i];
+    k.params = k.params || [];
+    while (k.params.length <= j) k.params.push({ name: '', bytes: '', formula: '' });
+    k.params[j][key] = val;
+    markDirty();
+  };
+  p.querySelectorAll('input[data-kpn]').forEach((el) => el.addEventListener('input', () => {
+    const parts = el.dataset.kpn.split(',');
+    setParam(parts[0], Number(parts[1]), Number(parts[2]), el.dataset.kk, el.value);
+  }));
+  p.querySelectorAll('[data-kpp]').forEach((el) => el.addEventListener('click', () => {
+    // append exactly one empty param (no index gaps)
+    const parts = el.dataset.kpp.split(',');
+    const c = parts[0], i = Number(parts[1]);
+    const k = ((d.known_ids || {})[c] || [])[i];
+    if (!k) return;
+    k.params = k.params || [];
+    k.params.push({ name: '', bytes: '', formula: '' });
+    markDirty(); renderKnown();
+  }));
+  p.querySelectorAll('[data-kpd]').forEach((el) => el.addEventListener('click', () => {
+    const parts = el.dataset.kpd.split(',');
+    const k = ((d.known_ids || {})[parts[0]] || [])[Number(parts[1])];
+    k.params.splice(Number(parts[2]), 1);
+    markDirty(); renderKnown();
+  }));
+  p.querySelectorAll('[data-kid]').forEach((el) => el.addEventListener('click', () => {
+    const parts = el.dataset.kid.split(',');
+    ((d.known_ids || {})[parts[0]] || []).splice(Number(parts[1]), 1);
+    markDirty(); renderKnown();
+  }));
+  const badd = $('b-ki-add');
+  if (badd) badd.addEventListener('click', () => {
+    const c = $('nki-car').value, id = $('nki-id').value.trim();
+    if (!c || !id) return;
+    d.known_ids = d.known_ids || {};
+    d.known_ids[c] = d.known_ids[c] || [];
+    if (d.known_ids[c].some((e) => e.id === id)) { alert('id exists for this car'); return; }
+    d.known_ids[c].push({ id, params: [{ name: '', bytes: '', formula: '' }] });
+    markDirty(); renderKnown();
+  });
+}
+
+// --- session rules ----------------------------------------------------------
+function renderRules() {
+  const p = $('tab-rules'); if (!p) return;
+  const d = state.doc;
+  const rows = [
+    ['quiet_s', 'Quiet phase, s', 5, 'silence before the action'],
+    ['after_s', 'After phase, s', 5, 'post-action observation'],
+    ['pause_s', 'Pause between tests, s', 10, ''],
+    ['repeats', 'Repeats per test', 3, ''],
+    ['action_min_s', 'Action min, s', 5, 'clamp for action duration'],
+    ['action_max_s', 'Action max, s', 15, 'clamp for action duration'],
+    ['state_max_s', 'State max, s', 120, 'cap for state recordings'],
+  ];
+  let html = '<div class="info">Session pacing rules consumed by the worker (per step: quiet → action → after, ×repeats). Scale factor for quick runs is a CLI/UI option, not stored here.</div><div class="grid2">';
+  for (const [key, label, def, hint] of rows) {
+    html += '<div class="field"><label>' + esc(label) + (hint ? ' <span class="muted">(' + esc(hint) + ')</span>' : '') + '</label>'
+      + '<input data-rule="' + key + '" type="number" step="1" ' + (key === 'repeats' ? 'min="1"' : '') + ' value="' + esc(ruleVal(key, def)) + '"></div>';
+  }
+  html += '</div>';
+  p.innerHTML = html;
+  p.querySelectorAll('input[data-rule]').forEach((el) => el.addEventListener('input', () => {
+    const v = Number(el.value);
+    if (!Number.isNaN(v)) { setRule(el.dataset.rule, v); markDirty(); }
+  }));
+}
+
+// --- stages & tests -----------------------------------------------------------
+function renderStages() {
+  const p = $('tab-stages'); if (!p) return;
+  const d = state.doc;
+  const cars = Object.keys(d.cars || {});
+  const buses = Object.keys(d.buses || {});
+  let html = '';
+  const list = stages();
+  list.forEach((st, si) => {
+    html += '<div class="stage-card" data-stage-card="' + si + '">'
+      + '<div class="stage-head">'
+      + '<input class="mono t-in" data-si="' + si + '" data-sf="id" style="width:52px" value="' + esc(st.id || '') + '" title="stage id">'
+      + '<input class="t-in" data-si="' + si + '" data-sf="title" style="flex:1;min-width:180px" value="' + esc(st.title || '') + '" placeholder="stage title">'
+      + (st.warn ? '<span class="badge badge-action">⚠</span>' : '')
+      + '<button class="btn btn-xs" data-sck="' + si + '">checklist (' + ((st.checklist || []).length) + ')</button>'
+      + '<button class="btn btn-xs btn-bad" data-sdel="' + si + '">×</button>'
+      + '</div>'
+      + '<div class="stage-body" data-sbody="' + si + '">'
+      + stageChecklistHtml(si)
+      + testsTableHtml(si, cars, buses)
+      + '</div></div>';
+  });
+  html += '<div class="btn-row"><button id="b-stage-add" class="btn btn-go">Add stage</button></div>';
+  if (state.selTest) {
+    const hit = testById(state.selTest);
+    if (hit) html += '<div class="stage-card" style="border-left-color:var(--warn)"><div class="stage-body" id="testedit"></div></div>';
+    else state.selTest = null;
+  }
+  p.innerHTML = html;
+  wireStages(cars, buses);
+  if (state.selTest && $('testedit')) renderTestEdit($('testedit'), state.selTest);
+}
+
+function stageChecklistHtml(si) {
+  const st = stages()[si];
+  const ck = st.checklist || [];
+  if (!ck.length) return '';
+  let h = '<div class="llist">';
+  ck.forEach((c, i) => {
+    h += '<div class="lline"><span class="mono muted small">' + (i + 1) + '.</span>'
+      + '<input type="text" data-ck="' + si + ',' + i + '" value="' + esc(c) + '">'
+      + '<button class="btn btn-xs btn-bad" data-ckd="' + si + ',' + i + '">×</button></div>';
+  });
+  h += '<div class="lline"><span class="mono muted small">+</span><input type="text" id="cknew-' + si + '" placeholder="new checklist item"><button class="btn btn-xs btn-go" data-cka="' + si + '">add</button></div></div>';
+  return h;
+}
+
+function testsTableHtml(si, cars, buses) {
+  const st = stages()[si];
+  const tests = st.tests || [];
+  if (!tests.length) return '<div class="muted small">no tests — add the first one below</div>';
+  let h = '<table class="t-tests"><thead><tr><th style="width:66px">id</th><th>title</th><th>car</th><th>bus</th>'
+    + '<th style="width:64px">kind</th><th style="width:70px">dur</th><th style="width:60px">checks</th><th style="width:70px">tx</th></tr></thead><tbody>';
+  tests.forEach((t, ti) => {
+    const tc = t.kind === 'action' ? 'badge-action' : 'badge-verify';
+    h += '<tr class="test-row' + (t.id === state.selTest ? ' cur' : '') + '" data-test="' + esc(t.id) + '" data-si="' + si + '">'
+      + '<td class="mono">' + esc(t.id) + '</td>'
+      + '<td>' + esc(t.title || '') + '</td>'
+      + '<td class="small">' + (t.car || []).map((c) => esc(c)).join(' ') + '</td>'
+      + '<td>' + (t.bus || []).map((b) => '<span class="badge ' + (b.toLowerCase() === 'ms' ? 'badge-ms' : 'badge-hs') + '">' + esc(b.toUpperCase()) + '</span>').join(' ') + '</td>'
+      + '<td><span class="badge ' + tc + '">' + esc(t.kind || 'state') + '</span></td>'
+      + '<td class="mono small">' + durShort(t.duration) + '</td>'
+      + '<td class="mono small">' + ((t.checks || []).length) + '</td>'
+      + '<td class="mono small">' + ((t.tx || []).length) + '</td></tr>';
+  });
+  h += '</tbody></table><div class="btn-row"><button class="btn btn-xs btn-go" data-tadd="' + si + '">+ test</button></div>';
+  return h;
+}
+
+function durShort(v) {
+  if (v === 'open-ended') return 'open';
+  if (v && typeof v === 'object') return (v.open ? 'open ' : '') + (v.min != null ? v.min + '-' : '') + (v.max != null ? v.max + 's' : '');
+  return (v == null ? '' : v) + 's';
+}
+
+function wireStages(cars, buses) {
+  const p = $('tab-stages'); if (!p) return;
+  const d = state.doc;
+  p.querySelectorAll('input[data-sf]').forEach((el) => el.addEventListener('input', () => {
+    stages()[Number(el.dataset.si)][el.dataset.sf] = el.value; markDirty();
+    if (el.dataset.sf === 'id') { /* ids referenced in tests stay */ }
+  }));
+  p.querySelectorAll('input[data-ck]').forEach((el) => el.addEventListener('input', () => {
+    const parts = el.dataset.ck.split(',');
+    const st = stages()[Number(parts[0])];
+    st.checklist = st.checklist || [];
+    st.checklist[Number(parts[1])] = el.value;
+    markDirty();
+  }));
+  p.querySelectorAll('[data-ckd]').forEach((el) => el.addEventListener('click', () => {
+    const parts = el.dataset.ckd.split(',');
+    const st = stages()[Number(parts[0])];
+    (st.checklist = st.checklist || []).splice(Number(parts[1]), 1);
+    markDirty(); renderStages();
+  }));
+  p.querySelectorAll('[data-cka]').forEach((el) => el.addEventListener('click', () => {
+    const si = Number(el.dataset.cka);
+    const inp = $('cknew-' + si);
+    const v = inp && inp.value.trim();
+    if (!v) return;
+    const st = stages()[si];
+    st.checklist = st.checklist || [];
+    st.checklist.push(v);
+    markDirty(); renderStages();
+  }));
+  p.querySelectorAll('[data-sck]').forEach((el) => el.addEventListener('click', () => {
+    const si = Number(el.dataset.sck);
+    const st = stages()[si];
+    st.checklist = st.checklist || [];
+    const idx = st.checklist.length;
+    st.checklist.push('');
+    renderStages();
+  }));
+  p.querySelectorAll('[data-sdel]').forEach((el) => el.addEventListener('click', () => {
+    const si = Number(el.dataset.sdel);
+    const st = stages()[si];
+    if (confirm('Remove stage ' + st.id + ' with ' + ((st.tests || []).length) + ' test(s)?')) {
+      stages().splice(si, 1);
+      if (state.selTest && testById(state.selTest) == null) state.selTest = null;
+      markDirty(); renderStages();
+    }
+  }));
+  p.querySelectorAll('[data-tadd]').forEach((el) => el.addEventListener('click', () => {
+    const si = Number(el.dataset.tadd);
+    const st = stages()[si];
+    st.tests = st.tests || [];
+    const id = nextTestId(st);
+    st.tests.push({
+      id, kind: 'state', title: '', do: '', duration: 10, file: '',
+      car: cars.slice(), bus: buses.slice(), checks: [], tx: [],
+    });
+    state.selTest = id;
+    markDirty(); renderStages();
+  }));
+  p.querySelectorAll('.test-row').forEach((row) => row.addEventListener('click', () => {
+    state.selTest = row.dataset.test;
+    renderStages();
+  }));
+  $('b-stage-add').addEventListener('click', () => {
+    const n0 = stages().length + 1;
+    let n = n0;
+    const exists = () => stages().some((s) => s.id === String(n));
+    while (exists()) n += 1;
+    stages().push({ id: String(n), title: 'Stage ' + n, warn: '', checklist: [], tests: [] });
+    markDirty(); renderStages();
+  });
+}
+
+// --- test editor -------------------------------------------------------------
+function renderTestEdit(mount, tid) {
+  const hit = testById(tid);
+  if (!hit) { mount.innerHTML = ''; return; }
+  const { st, t } = hit;
+  const d = state.doc;
+  const carKeys = Object.keys(d.cars || {});
+  const busKeys = Object.keys(d.buses || {});
+
+  const dur = t.duration;
+  const mode = (dur === 'open-ended') ? 'open' : ((dur && typeof dur === 'object') ? 'range' : 'fixed');
+  const dv = (dur !== 'open-ended') ? (dur && typeof dur === 'object' ? (dur.max != null ? dur.max : dur.min) : dur) : null;
+  const dvmin = (dur && typeof dur === 'object' && dur.min != null) ? dur.min : dv;
+  const ov = t.bus_override || null;
+  const hasOv = ov && Object.keys(ov).length;
+
+  let h = '<div class="card-head" style="margin-bottom:8px">'
+    + '<div class="kv" style="flex:1"><b>Test</b> <input id="t-id" class="mono" type="text" value="' + esc(t.id) + '" style="width:70px"> '
+    + '<span class="muted small">stage ' + esc(st.id) + ' · ' + durShort(dur) + 's</span></div>'
+    + '<button id="t-dup" class="btn btn-sm" title="copy this test">duplicate</button>'
+    + '<button id="t-del" class="btn btn-sm btn-bad">delete</button>'
+    + '<button id="t-close" class="btn btn-sm">close</button>'
+    + '</div>';
+
+  h += '<div class="grid2">'
+    + '<div class="field" style="min-width:180px"><label>Title</label><input id="t-title" type="text" value="' + esc(t.title || '') + '"></div>'
+    + '<div class="field" style="flex:1"><label>Action (do)</label><input id="t-do" type="text" value="' + esc(t.do || '') + '"></div>'
+    + '<div class="field"><label>Type</label><select id="t-kind">'
+    + ['state', 'action', 'setup'].map((k) => '<option value="' + k + '"' + (k === t.kind ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></div>'
+    + '<div class="field"><label>Duration</label><div class="form-row" style="gap:6px">'
+    + '<select id="t-durm" style="width:110px">'
+    + '<option value="fixed"' + (mode === 'fixed' ? ' selected' : '') + '>seconds</option>'
+    + '<option value="range"' + (mode === 'range' ? ' selected' : '') + '>min–max</option>'
+    + '<option value="open"' + (mode === 'open' ? ' selected' : '') + '>open-ended</option></select>'
+    + '<input id="t-dur" type="number" min="1" value="' + (dv == null ? 10 : dv) + '" ' + (mode === 'open' ? 'disabled' : '') + '>'
+    + '<input id="t-durmin" type="number" min="0" value="' + (dvmin == null ? dv : dvmin) + '" ' + (mode !== 'range' ? 'style="display:none"' : '') + '></div></div>'
+    + '</div>';
+
+  h += '<div class="kv"><b>Car</b> ' + carKeys.map((c) =>
+      '<label class="chip" style="margin-right:6px"><input type="checkbox" data-tcar="' + esc(c) + '"' + ((t.car || []).indexOf(c) >= 0 ? ' checked' : '') + ' style="width:auto"> ' + esc(c) + '</label>').join('') + '</div>';
+  h += '<div class="kv"><b>Bus</b> ' + busKeys.map((b) =>
+      '<label class="chip" style="margin-right:6px"><input type="checkbox" data-tbus="' + esc(b) + '"' + ((t.bus || []).indexOf(b) >= 0 ? ' checked' : '') + ' style="width:auto"> ' + esc(b.toUpperCase()) + '</label>')
+      + '<label class="chip" style="margin-left:14px"><input id="t-var" type="checkbox" ' + (t.variable ? 'checked' : '') + ' style="width:auto"> variable encoding</label>'
+      + '</div>';
+
+  h += '<div class="grid2">'
+    + '<div class="field" style="flex:1"><label>Log file base (name = {car}_{this}_{date}.log)</label><input id="t-file" type="text" class="mono" value="' + esc(t.file || '') + '"></div>'
+    + '<div class="field" style="flex:1"><label>Note</label><input id="t-note" type="text" value="' + esc(t.note || '') + '"></div>'
+    + '</div>';
+  if (t.warn) h += '<div class="warning">⚠ ' + esc(t.warn) + '</div>';
+  h += '<div class="field"><label>Warning</label><input id="t-warn" type="text" value="' + esc(t.warn || '') + '"></div>';
+
+  // expected ids
+  h += '<h3>Expected IDs (checks)</h3><div class="llist" id="t-checks">';
+  (t.checks || []).forEach((c, i) => {
+    h += '<div class="lline"><input type="text" class="mono" data-tch="' + i + '" value="' + esc(c) + '">'
+      + '<button class="btn btn-xs btn-bad" data-tchdel="' + i + '">×</button></div>';
+  });
+  h += '<div class="lline"><input type="text" class="mono" id="t-chnew" placeholder="0x201"><button id="t-chadd" class="btn btn-xs btn-go">add</button></div></div>';
+
+  // bus override
+  h += '<h3>Bus override (per-test rate / encoding)</h3><div class="form-row">'
+    + '<label class="chip"><input id="t-ov-on" type="checkbox" ' + (hasOv ? 'checked' : '') + ' style="width:auto"> enabled</label>'
+    + '<div class="field" style="min-width:120px"><label>can_baud</label><input id="t-ov-baud" type="number" step="1000" min="1" value="' + ovBaudOf(t, ov) + '"></div>'
+    + '<label class="chip"><input id="t-ov-std" type="checkbox" ' + (!ov || ov.std_only !== false ? 'checked' : '') + ' style="width:auto"> std_only</label>'
+    + '<label class="chip"><input id="t-ov-var" type="checkbox" ' + (ov && ov.variable ? 'checked' : '') + ' style="width:auto"> variable</label>'
+    + '</div>';
+
+  // tx patterns
+  h += '<h3>TX patterns (injection)</h3><div id="t-txpats" class="llist">';
+  (t.tx || []).forEach((p, i) => {
+    h += txFramesHtml(i, p);
+  });
+  h += '</div><div class="btn-row"><button id="t-txadd" class="btn btn-xs btn-go">+ TX pattern</button></div>';
+  mount.innerHTML = h;
+  wireTestEdit(mount, st, t, tid);
+}
+
+function txFramesHtml(pi, p) {
+  let h = '<div style="border:1px solid var(--border);border-radius:4px;margin:6px 0;padding:6px 8px" class="txpat" data-txp="' + pi + '">'
+    + '<div class="form-row" style="gap:8px">'
+    + '<div class="field" style="min-width:80px;margin:0"><label>bus</label><select data-txbus="' + pi + '" style="width:80px">'
+    + Object.keys(state.doc.buses || {}).map((b) => '<option value="' + esc(b) + '"' + (b === p.bus ? ' selected' : '') + '>' + esc(b) + '</option>').join('') + '</select></div>'
+    + '<div class="field" style="min-width:80px;margin:0"><label>hz</label><input data-txhz="' + pi + '" type="number" min="0.5" step="0.5" value="' + esc(p.hz == null ? 10 : p.hz) + '"></div>'
+    + '<label class="chip" style="margin-left:4px"><input data-txph="' + pi + ',quiet" type="checkbox" ' + (phOn(p, 'quiet') ? 'checked' : '') + ' style="width:auto"> quiet</label>'
+    + '<label class="chip"><input data-txph="' + pi + ',action" type="checkbox" ' + (phOn(p, 'action') ? 'checked' : '') + ' style="width:auto"> action</label>'
+    + '<label class="chip"><input data-txph="' + pi + ',after" type="checkbox" ' + (phOn(p, 'after') ? 'checked' : '') + ' style="width:auto"> after</label>'
+    + '<button data-txdel="' + pi + '" class="btn btn-xs btn-bad" style="margin-left:auto">delete</button>'
+    + '</div><div class="llist" data-txfr="' + pi + '">';
+  (p.frames || []).forEach((f, j) => {
+    const dv = (f.data == null) ? '' : (Array.isArray(f.data) ? f.data.map((b) => b.toString(16).padStart(2, '0')).join(' ') : String(f.data));
+    h += '<div class="lline"><input type="text" class="mono" data-txfid="' + pi + ',' + j + '" placeholder="0x123" value="' + esc(f.id == null ? '' : f.id) + '">'
+      + '<input type="text" class="mono" data-txfdata="' + pi + ',' + j + '" placeholder="data hex" style="flex:3" value="' + esc(dv) + '">'
+      + '<button class="btn btn-xs btn-bad" data-txfdel="' + pi + ',' + j + '">×</button></div>';
+  });
+  h += '<div class="lline"><input type="text" class="mono" id="txfnewid-' + pi + '" placeholder="0x123" style="flex:1">'
+    + '<input type="text" class="mono" id="txfnewdata-' + pi + '" placeholder="data hex" style="flex:3">'
+    + '<button data-txfadd="' + pi + '" class="btn btn-xs btn-go">add frame</button></div></div></div>';
+  return h;
+}
+function ovBaudOf(t, ov) {
+  // override can_baud default: the override's own value, else the first test
+  // bus rate (so enabling an override on MS does not jump to 500k)
+  if (ov && ov.can_baud) return ov.can_baud;
+  const d = state.doc, b = (t.bus && t.bus[0]) ? (d.buses || {})[t.bus[0]] : null;
+  return b && b.can_baud ? b.can_baud : 500000;
+}
+
+function phOn(p, name) {
+  if (!p.phases) return true; // None = all phases (runner default)
+  return (p.phases || []).indexOf(name) >= 0;
+}
+
+function wireTestBase(mount, st, t) {
+  const durm = $('t-durm'), durv = $('t-dur'), durmin = $('t-durmin');
+  const applyDurMode = () => {
+    const m = durm.value;
+    durv.disabled = (m === 'open');
+    durmin.style.display = (m === 'range') ? '' : 'none';
+  };
+  const saveDur = () => {
+    const m = durm.value;
+    if (m === 'open') t.duration = 'open-ended';
+    else if (m === 'range') {
+      const mn = Math.max(0, Math.round(Number(durmin.value) || 0));
+      const mx = Math.max(mn, 1, Math.round(Number(durv.value) || mn));
+      t.duration = { min: mn, max: mx };
+    } else {
+      t.duration = Math.max(1, Math.round(Number(durv.value) || 10));
+    }
+    markDirty();
+  };
+  if (durm) { durm.addEventListener('change', () => { applyDurMode(); saveDur(); }); applyDurMode(); }
+  if (durv) durv.addEventListener('change', saveDur);
+  if (durmin) durmin.addEventListener('change', saveDur);
+
+  const idEl = $('t-id');
+  if (idEl) idEl.addEventListener('change', () => {
+    const v = idEl.value.trim();
+    if (!v) { idEl.value = t.id; return; }
+    if (v === t.id) return;
+    const other = testById(v);
+    if (other && other.t !== t) { alert('id ' + v + ' already exists'); idEl.value = t.id; return; }
+    const old = t.id;
+    t.id = v;
+    if (state.selTest === old) state.selTest = v;
+    markDirty(); renderStages();
+  });
+  const bind1 = (id, key, type) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('input', () => { t[key] = (type === 'num') ? Number(el.value) : el.value; markDirty(); });
+  };
+  bind1('t-title', 'title');
+  bind1('t-do', 'do');
+  bind1('t-file', 'file');
+  bind1('t-note', 'note');
+  bind1('t-warn', 'warn');
+  const kind = $('t-kind');
+  if (kind) kind.addEventListener('change', () => { t.kind = kind.value; markDirty(); renderStages(); });
+  const varc = $('t-var');
+  if (varc) varc.addEventListener('change', () => { t.variable = varc.checked; markDirty(); });
+  // car / bus checkbox arrays (doc order)
+  const carKeys = Object.keys(state.doc.cars || {});
+  const busKeys = Object.keys(state.doc.buses || {});
+  mount.querySelectorAll('[data-tcar]').forEach((el) => el.addEventListener('change', () => {
+    t.car = carKeys.filter((k) => mount.querySelector('[data-tcar="' + k + '"]').checked);
+    markDirty(); renderStages();
+  }));
+  mount.querySelectorAll('[data-tbus]').forEach((el) => el.addEventListener('change', () => {
+    t.bus = busKeys.filter((k) => mount.querySelector('[data-tbus="' + k + '"]').checked);
+    markDirty(); renderStages();
+  }));
+}
+
+function wireTestChecksOv(mount, st, t) {
+  // expected ids
+  mount.querySelectorAll('input[data-tch]').forEach((el) => el.addEventListener('input', () => {
+    t.checks = t.checks || [];
+    t.checks[Number(el.dataset.tch)] = el.value.trim();
+    markDirty();
+  }));
+  mount.querySelectorAll('[data-tchdel]').forEach((el) => el.addEventListener('click', () => {
+    t.checks = t.checks || [];
+    t.checks.splice(Number(el.dataset.tchdel), 1);
+    markDirty(); renderTestEdit(mount, t.id);
+  }));
+  const chadd = $('t-chadd');
+  if (chadd) chadd.addEventListener('click', () => {
+    const inp = $('t-chnew');
+    const v = inp.value.trim();
+    if (!v) return;
+    t.checks = t.checks || [];
+    t.checks.push(v);
+    markDirty(); renderTestEdit(mount, t.id);
+  });
+  // bus override
+  const ovOn = $('t-ov-on');
+  const saveOv = () => {
+    const ov = {
+      can_baud: Math.max(1, Math.round(Number($('t-ov-baud').value) || ovBaudOf(t, null))),
+      std_only: $('t-ov-std').checked,
+      variable: $('t-ov-var').checked,
+    };
+    if (ovOn.checked) t.bus_override = ov; else delete t.bus_override;
+    markDirty();
+  };
+  if (ovOn) {
+    ovOn.addEventListener('change', saveOv);
+    ['t-ov-baud', 't-ov-std', 't-ov-var'].forEach((id) => {
+      const el = $(id);
+      if (el) el.addEventListener('change', saveOv);
+    });
+  }
+}
+
+function wireTestTx(mount, st, t) {
+  t.tx = t.tx || [];
+  const rebuild = () => renderTestEdit(mount, t.id);
+
+  const savePattern = (pi, fn) => {
+    if (fn(pi)) t.tx[pi] = fn(pi);
+  };
+  mount.querySelectorAll('[data-txbus]').forEach((el) => el.addEventListener('change', () => {
+    const pi = Number(el.dataset.txbus);
+    t.tx[pi].bus = el.value;
+    markDirty();
+  }));
+  mount.querySelectorAll('[data-txhz]').forEach((el) => el.addEventListener('change', () => {
+    const pi = Number(el.dataset.txhz);
+    const hz = Number(el.value);
+    t.tx[pi].hz = (Number.isFinite(hz) && hz > 0) ? hz : 10;
+    markDirty();
+  }));
+  mount.querySelectorAll('[data-txph]').forEach((el) => el.addEventListener('change', () => {
+    const pi = Number(el.dataset.txph.split(',')[0]);
+    const p = t.tx[pi];
+    const names = ['quiet', 'action', 'after'];
+    const sel = names.filter((n) => {
+      const c = mount.querySelector('[data-txph="' + pi + ',' + n + '"]');
+      return c && c.checked;
+    });
+    if (sel.length === 3) p.phases = null;      // null = all phases
+    else p.phases = sel;
+    markDirty();
+  }));
+  mount.querySelectorAll('[data-txdel]').forEach((el) => el.addEventListener('click', () => {
+    t.tx.splice(Number(el.dataset.txdel), 1);
+    markDirty(); rebuild();
+  }));
+  // frames
+  mount.querySelectorAll('input[data-txfid]').forEach((el) => el.addEventListener('input', () => {
+    const parts = el.dataset.txfid.split(',');
+    t.tx[Number(parts[0])].frames[Number(parts[1])].id = el.value.trim();
+    markDirty();
+  }));
+  mount.querySelectorAll('input[data-txfdata]').forEach((el) => el.addEventListener('input', () => {
+    const parts = el.dataset.txfdata.split(',');
+    t.tx[Number(parts[0])].frames[Number(parts[1])].data = el.value.trim();
+    markDirty();
+  }));
+  mount.querySelectorAll('[data-txfdel]').forEach((el) => el.addEventListener('click', () => {
+    const parts = el.dataset.txfdel.split(',');
+    t.tx[Number(parts[0])].frames.splice(Number(parts[1]), 1);
+    markDirty(); rebuild();
+  }));
+  mount.querySelectorAll('[data-txfadd]').forEach((el) => el.addEventListener('click', () => {
+    const pi = Number(el.dataset.txfadd);
+    const id = $('txfnewid-' + pi).value.trim();
+    const data = $('txfnewdata-' + pi).value.trim();
+    if (!id) return;
+    t.tx[pi].frames = t.tx[pi].frames || [];
+    t.tx[pi].frames.push(data ? { id, data } : { id });
+    markDirty(); rebuild();
+  }));
+  const txadd = $('t-txadd');
+  if (txadd) txadd.addEventListener('click', () => {
+    t.tx.push({ bus: (t.bus && t.bus[0]) || 'hs', hz: 10, frames: [], phases: null });
+    markDirty(); rebuild();
+  });
+}
+
+function wireTestEdit(mount, st, t, tid) {
+  wireTestBase(mount, st, t);
+  wireTestChecksOv(mount, st, t);
+  wireTestTx(mount, st, t);
+  const close = $('t-close');
+  if (close) close.addEventListener('click', () => { state.selTest = null; renderStages(); });
+  const del = $('t-del');
+  if (del) del.addEventListener('click', () => {
+    if (!confirm('Delete test ' + t.id + '?')) return;
+    const idx = (st.tests || []).indexOf(t);
+    if (idx >= 0) st.tests.splice(idx, 1);
+    state.selTest = null;
+    markDirty(); renderStages();
+  });
+  const dup = $('t-dup');
+  if (dup) dup.addEventListener('click', () => {
+    st.tests = st.tests || [];
+    const id = nextTestId(st);
+    const copy = JSON.parse(JSON.stringify(t));
+    copy.id = id;
+    st.tests.push(copy);
+    state.selTest = id;
+    markDirty(); renderStages();
+  });
+}
+
+// --- render dispatcher --------------------------------------------------------
+function updateCounts() {
+  const d = state.doc || {};
+  const nc = Object.keys(d.cars || {}).length;
+  const nb = Object.keys(d.buses || {}).length;
+  const nk = Object.keys(d.cars || {}).reduce((n, c) => n + (((d.known_ids || {})[c] || []).length), 0);
+  $('ncars').textContent = nc;
+  $('nbuses').textContent = nb;
+  $('nknown').textContent = nk;
+  $('scenname').textContent = state.name || '—';
+}
+function renderAll() {
+  if (!state.doc) { renderMeta(); updateCounts(); renderScenList(); return; }
+  updateCounts();
+  renderMeta();
+  switch (state.tab) {
+    case 'stages': renderStages(); break;
+    case 'cars': renderCars(); break;
+    case 'buses': renderBuses(); break;
+    case 'known': renderKnown(); break;
+    case 'rules': renderRules(); break;
+    case 'source': renderSource(); break;
+  }
+  renderScenList();
+}
+
+// --- source mode ----------------------------------------------------------
+function renderSource() {
+  if (!state.doc) { $('srctext').value = ''; state.srcDirty = false; $('srcstat').textContent = 'no scenario'; return; }
+  const ta = $('srctext');
+  // re-sync only from a known clean baseline — untouched source edits are kept
+  // visible until applied ("Apply to editor") or reloaded ("Reload from file")
+  if (document.activeElement !== ta && (ta.value === '' || ta.value === state.srcBase)) ta.value = state.srcBase;
+  $('srcstat').textContent = state.srcDirty
+    ? 'source edited — apply to the editor or reload from file'
+    : (state.dirty ? 'unsaved editor changes (save to persist)' : 'synced with editor');
+}
+function srcApply() {
+  try {
+    const p = JSON.parse($('srctext').value);
+    if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('must be a JSON object');
+    if (!state.name) throw new Error('load or create a scenario first');
+    if (p.name && p.name !== state.name) p.name = state.name;
+    state.doc = p;
+    state.srcDirty = false;
+    srcBaseNow();
+    markDirty();
+    updateCounts();
+    renderSource();
+    toast('source applied to the editor state');
+  } catch (e) { $('srcstat').textContent = 'apply: ' + e.message; }
+}
+async function srcReload() {
+  if (!state.name) return;
+  try {
+    const j = await jreq('/api/scenario?name=' + encodeURIComponent(state.name));
+    state.doc = j.doc;
+    state.srcDirty = false;
+    markClean();
+    srcBaseNow();
+    $('srctext').value = state.srcBase;
+    renderSource();
+    toast('reloaded from disk');
+  } catch (e) { $('srcstat').textContent = 'reload: ' + e.message; }
+}
+
+// --- init -------------------------------------------------------------------
+async function init() {
+  document.querySelectorAll('.tab').forEach((el) => el.addEventListener('click', () => setTab(el.dataset.tab)));
+  $('b-save').addEventListener('click', saveScenario);
+  $('b-del').addEventListener('click', delScenario);
+  $('b-dup').addEventListener('click', dupScenario);
+  $('b-new').addEventListener('click', createScenario);
+  $('newscen').addEventListener('keydown', (e) => { if (e.key === 'Enter') createScenario(); });
+  $('b-src-format').addEventListener('click', () => {
+    try {
+      $('srctext').value = JSON.stringify(JSON.parse($('srctext').value), null, 1);
+      state.srcDirty = true;
+      $('srcstat').textContent = 'formatted';
+    } catch (e) { $('srcstat').textContent = 'format: ' + e.message; }
+  });
+  $('srctext').addEventListener('input', () => { state.srcDirty = true; });
+  $('b-src-apply').addEventListener('click', srcApply);
+  $('b-src-reload').addEventListener('click', srcReload);
+  $('b-fs-open').addEventListener('click', fsOpen);
+  $('b-fs-save').addEventListener('click', () => fsSave(false));
+  $('b-fs-saveas').addEventListener('click', () => fsSave(true));
+  $('b-fs-detach').addEventListener('click', fsDetach);
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveScenario(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'o' && !e.shiftKey) { e.preventDefault(); fsOpen(); }
+  });
+  window.addEventListener('beforeunload', (e) => {
+    if (state.dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+  await refreshList();
+  const q = new URLSearchParams(location.search);
+  const want = q.get('scenario');
+  if (want && state.names.indexOf(want) >= 0) await openScenario(want);
+  else if (state.names.length) await openScenario(state.names[0]);
+}
+init();
+</script>
+</body>
+</html>

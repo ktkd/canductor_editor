@@ -1,0 +1,9 @@
+# conda env for the unit tests. The python version is pinned via the
+# python-version input of setup-miniconda.
+name: ci
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pip

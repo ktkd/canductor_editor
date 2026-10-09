@@ -1,0 +1,10 @@
+# conda env for the dist build (job also passes python-version). Tool
+# packages stay out of the conda env (they are pip-installed in the
+# workflow) to keep the conda solve trivial.
+name: ci-build
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pip

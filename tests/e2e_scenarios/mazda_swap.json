@@ -1,0 +1,85 @@
+{
+ "name": "mazda_swap",
+ "title": "Mazda RX-8 swap (dummy scenario for the UI e2e checks)",
+ "version": "1.0",
+ "cars": {
+  "rx8": {
+   "label": "Mazda RX-8"
+  }
+ },
+ "buses": {
+  "hs": {
+   "label": "HS-CAN 500 kbit/s",
+   "can_baud": 500000,
+   "point": "OBD-II: pin 6 (CAN_H), pin 14 (CAN_L)",
+   "std_only": true
+  },
+  "ms": {
+   "label": "MS-CAN 125 kbit/s",
+   "can_baud": 125000,
+   "point": "body / HVAC",
+   "std_only": true
+  }
+ },
+ "rules": {
+  "quiet_s": 5,
+  "after_s": 5,
+  "repeats": 3,
+  "pause_s": 10,
+  "action_min_s": 5,
+  "action_max_s": 15,
+  "state_max_s": 120
+ },
+ "known_ids": {
+  "rx8": [
+   {
+    "id": "0x201",
+    "params": [
+     {
+      "name": "RPM",
+      "bytes": "0-1",
+      "formula": "UINT16*0.25"
+     },
+     {
+      "name": "throttle",
+      "bytes": "2",
+      "formula": "UINT8"
+     }
+    ]
+   }
+  ]
+ },
+ "warnings": [],
+ "stages": [
+  {
+   "id": "1",
+   "title": "Pre-checks",
+   "warn": "",
+   "checklist": [
+    "engine runs, CAN ids visible on both buses"
+   ],
+   "tests": [
+    {
+     "id": "1.1",
+     "kind": "state",
+     "title": "Idle",
+     "do": "engine idle; verify expected ids",
+     "car": [
+      "rx8"
+     ],
+     "bus": [
+      "hs",
+      "ms"
+     ],
+     "duration": 30,
+     "file": "idle",
+     "note": "",
+     "checks": [
+      "0x201"
+     ],
+     "tx": []
+    }
+   ]
+  }
+ ]
+}

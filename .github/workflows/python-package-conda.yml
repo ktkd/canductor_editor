@@ -1,0 +1,205 @@
+# CI for canductor-editor (https://github.com/ktkd/canductor_editor)
+#
+# conda is set up with conda-incubator/setup-miniconda@v4, following the
+# action's "Example 6: Mamba" pattern from its docs:
+#   * channels "conda-forge,defaults" with channel-priority: true
+#   * the env is fixed by name via environment-file (.github/env/*.yml)
+#   * activate-environment pins which env the action writes into the shell
+#     profiles -> every following step runs as a login shell (bash -el)
+#   * the python version comes from the python-version input
+#   * tool packages (build, selenium, twine) are pip-installed in the jobs -
+#     the conda env file only carries python+pip, so the conda solve is
+#     trivial and independent of channel naming quirks
+#
+# Jobs
+#   test    - unit tests (tests/test_api.py), Python 3.10-3.14 matrix
+#   build   - sdist + wheel, uploaded as the `dist` artifact
+#   e2e     - web UI end-to-end (tests/e2e_ui.py) via the Selenium grid
+#             container; runs against the dummy scenarios in tests/e2e_scenarios/
+#   publish - PyPI release, tags `v*` only (needs `PYPI_API_TOKEN` secret)
+name: python-package-conda
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ "v*" ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          mamba-version: "*"
+          use-mamba: true
+          channels: conda-forge,defaults
+          channel-priority: true
+          environment-file: .github/env/ci.yml
+          activate-environment: ci
+
+      - name: Install the package
+        run: |
+          python -V | grep -q "${{ matrix.python-version }}" || { printenv | sort; conda env list; exit 1; }
+          mamba --version
+          python -m pip install .
+          canductor-editor --version
+
+      - name: Run unit tests
+        run: python tests/test_api.py
+
+  build:
+    name: build dist
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          python-version: "3.12"
+          mamba-version: "*"
+          use-mamba: true
+          channels: conda-forge,defaults
+          channel-priority: true
+          environment-file: .github/env/ci-build.yml
+          activate-environment: ci-build
+
+      - name: Build sdist + wheel
+        run: |
+          python -V | grep -q "3.12" || { printenv | sort; conda env list; exit 1; }
+          mamba --version
+          python -m pip install build
+          python -m build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 14
+
+  e2e:
+    name: e2e web UI (selenium)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    env:
+      SE_HOST: http://localhost:4444
+      # no trailing slash: the test appends its own "/"
+      PAGE_URL: http://host.docker.internal:8120
+      LOCAL_URL: http://127.0.0.1:8120
+    steps:
+      - uses: actions/checkout@v4
+
+      # dummy scenarios (bench_quick, mazda_swap) are checked in at
+      # tests/e2e_scenarios/ - they pass both the editor validator and the
+      # real canductor scenario loader, so the e2e needs no sibling repo
+
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          python-version: "3.12"
+          mamba-version: "*"
+          use-mamba: true
+          channels: conda-forge,defaults
+          channel-priority: true
+          environment-file: .github/env/ci-e2e.yml
+          activate-environment: ci-e2e
+
+      - name: Install the package
+        run: |
+          python -V | grep -q "3.12" || { printenv | sort; conda env list; exit 1; }
+          mamba --version
+          python -m pip install selenium .
+          canductor-editor --version
+
+      - name: Start Selenium grid
+        run: |
+          docker run -d --name selenium-grid \
+            -p 4444:4444 \
+            --add-host=host.docker.internal:host-gateway \
+            -e SE_CB=false \
+            selenium/standalone-chrome:153.0
+          for i in $(seq 1 60); do
+            curl -fs http://localhost:4444/status > /dev/null && break
+            sleep 2
+          done
+          curl -fs http://localhost:4444/status
+
+      - name: Start the editor
+        run: |
+          canductor-editor --scenarios tests/e2e_scenarios \
+            --host 0.0.0.0 --port 8120 > editor.log 2>&1 &
+          echo $! > editor.pid
+          for i in $(seq 1 30); do
+            curl -fs http://127.0.0.1:8120/api/scenarios > /dev/null && break
+            sleep 1
+          done
+          curl -fs http://127.0.0.1:8120/api/scenarios
+
+      - name: Run e2e UI test
+        run: python tests/e2e_ui.py
+
+      - name: Stop editor
+        if: always()
+        run: kill "$(cat editor.pid)" 2> /dev/null || true
+
+      - name: Grid logs (on failure)
+        if: failure()
+        run: docker logs --tail 200 selenium-grid || true
+
+  publish:
+    name: publish to PyPI
+    needs: [ test, build ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    # environment: pypi          # uncomment if you create a "pypi" deployment
+    #                               (Protection rules) environment in repo settings
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - uses: conda-incubator/setup-miniconda@v4
+        with:
+          python-version: "3.12"
+          mamba-version: "*"
+          use-mamba: true
+          channels: conda-forge,defaults
+          channel-priority: true
+          environment-file: .github/env/ci-publish.yml
+          activate-environment: ci-publish
+
+      - name: Upload to PyPI
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          mamba --version
+          python -m pip install twine
+          if [ -n "$PYPI_API_TOKEN" ]; then
+            python -m twine upload dist/* -u __token__ -p "$PYPI_API_TOKEN"
+          else
+            echo "PYPI_API_TOKEN is not set - skipping upload"
+          fi

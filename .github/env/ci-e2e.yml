@@ -1,0 +1,9 @@
+# conda env for the Selenium web UI e2e (the selenium client is pip-installed
+# in the workflow)
+name: ci-e2e
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pip
